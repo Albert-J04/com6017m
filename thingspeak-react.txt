@@ -1,0 +1,38 @@
+% config
+channelID = ;    
+readAPIKey = '';
+alertApiKey = '';
+alertUrl = "https://api.thingspeak.com/alerts/send";
+
+% read last value
+%  use 'NumPoints', 1 to get the instantaneous current status.
+[lastValue, timeStamp] = thingSpeakRead(channelID, 'Fields', 1, 'NumPoints', 1, 'ReadKey', readAPIKey);
+
+% setup alert
+sendAlert = false;
+alertSubject = "";
+alertBody = "";
+
+if isempty(lastValue)
+    disp("No data found.");
+else
+    % person (Codes 1 to 9)
+    if (lastValue >= 1 && lastValue <= 9)
+        sendAlert = true;
+        alertSubject = Intruder Detected";
+        alertBody = sprintf("Doorbell detected %d person(s)");
+    end
+end
+
+% send email
+if sendAlert
+    try
+        options = weboptions("HeaderFields", ["ThingSpeak-Alerts-API-Key", alertApiKey]);
+        webwrite(alertUrl, "body", alertBody, "subject", alertSubject, options);
+        fprintf("Alert Sent: %s\n", alertSubject);
+    catch e
+        fprintf("Failed to send alert: %s\n", e.message);
+    end
+else
+    fprintf("System Safe (Code %d). No email sent.\n", lastValue);
+end
